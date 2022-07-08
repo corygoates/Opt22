@@ -10,7 +10,7 @@ function rosenbrock(x) result(f)
 
     implicit none
 
-    real,dimension(:),allocatable,intent(in) :: x
+    real,dimension(:),intent(in) :: x
     real :: f
 
     integer :: N, i
@@ -39,7 +39,7 @@ function himmelblau(x) result(f)
 
     implicit none
     
-    real,dimension(:),allocatable,intent(in) :: x
+    real,dimension(:),intent(in) :: x
     real :: f
 
     f = (x(1)**2 + x(2) - 11.0)**2 + (x(1) + x(2)**2 - 7.)**2
