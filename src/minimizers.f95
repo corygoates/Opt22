@@ -105,7 +105,7 @@ function nelder_mead(f, x0, termination_tol, reflection_coef, expansion_coef, co
         ! Check standard deviation for termination
         avg = sum(f_simp)/(N+1)
         std_dev = sum((f_simp-avg)**2)/N
-        if (std_dev <= 1.e-6) exit
+        if (std_dev <= 1.e-12) exit
 
         ! Arrange the vertices
         call insertion_arg_sort(f_simp, i_sorted)
@@ -115,13 +115,14 @@ function nelder_mead(f, x0, termination_tol, reflection_coef, expansion_coef, co
         do i=2,N+1
             x_cent = x_cent + x_simp(:,i)
         end do
-        x_cent = x_cent / N
+        x_cent = x_cent / (N+1)
 
         ! Reflection
         write(*,*)
         write(*,*) "Reflecting"
         x_r = x_cent + alpha*(x_cent - x_simp(:,i_sorted(N+1)))
         f_r = f(x_r)
+        write(*,*) "x_r: ", x_r
         write(*,*) "f_r: ", f_r
 
         ! Check if the reflected point is good but not too good
@@ -138,6 +139,7 @@ function nelder_mead(f, x0, termination_tol, reflection_coef, expansion_coef, co
             ! Calculate expanded point
             x_e = x_cent + gamma*(x_r - x_cent)
             f_e = f(x_e)
+            write(*,*) "x_e: ", x_e
             write(*,*) "f_e: ", f_e
 
             ! Compare to reflected point
@@ -163,6 +165,7 @@ function nelder_mead(f, x0, termination_tol, reflection_coef, expansion_coef, co
                 ! Calculate contracted point
                 x_c = x_cent + rho*(x_r - x_cent)
                 f_c = f(x_c)
+                write(*,*) "x_c: ", x_c
                 write(*,*) "f_c: ", f_c
 
                 ! Compare to reflected point
@@ -178,6 +181,7 @@ function nelder_mead(f, x0, termination_tol, reflection_coef, expansion_coef, co
                 ! Calculate contracted point
                 x_c = x_cent + rho*(x_simp(:,i_sorted(N+1)) - x_cent)
                 f_c = f(x_c)
+                write(*,*) "x_c: ", x_c
                 write(*,*) "f_c: ", f_c
 
                 ! Compare to worst point
@@ -195,13 +199,13 @@ function nelder_mead(f, x0, termination_tol, reflection_coef, expansion_coef, co
         write(*,*)
         write(*,*) "Shrinking"
         ! If we've made it here, then the simplex needs to shrink
-        do i =2,N+1
+        do i=2,N+1
 
             ! Shrink in vertices
             x_simp(:,i_sorted(i)) = x_simp(:,i_sorted(1)) + sigma*(x_simp(:,i_sorted(i)) - x_simp(:,i_sorted(1)))
 
             ! Calculate new values
-            f_simp(i) = f(x_simp(:,i))
+            f_simp(i_sorted(i)) = f(x_simp(:,i_sorted(i)))
 
         end do
 
