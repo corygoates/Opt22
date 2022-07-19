@@ -10,10 +10,14 @@ program test_nelder_mead
 
     ! Set up initial guess
     allocate(x0(2))
-    x0(1) = -1.
-    x0(2) = 3.
+    x0(1) = -100.
+    x0(2) = 300.
 
     ! Run optimizer
-    solution = nelder_mead(rosenbrock, x0)
+    solution = nelder_mead(rosenbrock, x0, termination_tol=1e-14)
+    write(*,*)
+    write(*,*) "x_opt: ", solution%x_opt
+    write(*,*) "f_opt: ", solution%f_opt
+    write(*,*) "Iterations: ", solution%iterations
     
 end program test_nelder_mead

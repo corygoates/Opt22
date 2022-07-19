@@ -8,6 +8,7 @@ module minimizers_mod
 
         real,dimension(:),allocatable :: x_opt
         real :: f_opt
+        integer :: iterations
     
     end type optimizer_result
     
@@ -31,7 +32,7 @@ function nelder_mead(f, x0, termination_tol, reflection_coef, expansion_coef, co
     real :: avg, std_dev
     real :: tol, alpha, gamma, rho, sigma, f_r, f_e, f_c
     real,dimension(:,:),allocatable :: x_simp
-    real,dimension(:),allocatable :: f_simp, x_cent, x_r, x_e, x_c
+    real,dimension(:),allocatable :: f_simp, x_cent, x_r, x_e, x_c, dists
     integer,dimension(:),allocatable :: i_sorted
 
     ! Set defaults
@@ -74,6 +75,7 @@ function nelder_mead(f, x0, termination_tol, reflection_coef, expansion_coef, co
     allocate(x_r(N))
     allocate(x_e(N))
     allocate(x_c(N))
+    allocate(dists(N+1))
     x_simp(:,1) = x0
     do i=2,N+1
         x_simp(:,i) = x0
@@ -92,38 +94,26 @@ function nelder_mead(f, x0, termination_tol, reflection_coef, expansion_coef, co
 
         ! Update iteration number
         iteration = iteration + 1
-        write(*,*)
-        write(*,*)
-        write(*,*) "Iteration: ", iteration
-        write(*,*) "x:"
-        do i=1,N+1
-            write(*,*) x_simp(:,i)
-        end do
-        write(*,*)
-        write(*,*) "f: ", f_simp
-
-        ! Check standard deviation for termination
-        avg = sum(f_simp)/(N+1)
-        std_dev = sum((f_simp-avg)**2)/N
-        if (std_dev <= 1.e-12) exit
 
         ! Arrange the vertices
         call insertion_arg_sort(f_simp, i_sorted)
 
-        ! Calculate centroid
-        x_cent = x_simp(:,1)
+        ! Check distances from the minimum
         do i=2,N+1
-            x_cent = x_cent + x_simp(:,i)
+            dists(i) = sum((x_simp(:,i_sorted(i)) - x_simp(:,i_sorted(1)))**2)
         end do
-        x_cent = x_cent / (N+1)
+        if (maxval(dists) <= tol) exit
+
+        ! Calculate centroid
+        x_cent = 0.
+        do i=1,N
+            x_cent = x_cent + x_simp(:,i_sorted(i))
+        end do
+        x_cent = x_cent / N
 
         ! Reflection
-        write(*,*)
-        write(*,*) "Reflecting"
         x_r = x_cent + alpha*(x_cent - x_simp(:,i_sorted(N+1)))
         f_r = f(x_r)
-        write(*,*) "x_r: ", x_r
-        write(*,*) "f_r: ", f_r
 
         ! Check if the reflected point is good but not too good
         if (f_r >= f_simp(i_sorted(1)) .and. f_r < f_simp(i_sorted(N))) then
@@ -133,14 +123,10 @@ function nelder_mead(f, x0, termination_tol, reflection_coef, expansion_coef, co
 
         ! Expansion
         else if (f_r < f_simp(i_sorted(1))) then
-            write(*,*)
-            write(*,*) "Expanding"
 
             ! Calculate expanded point
             x_e = x_cent + gamma*(x_r - x_cent)
             f_e = f(x_e)
-            write(*,*) "x_e: ", x_e
-            write(*,*) "f_e: ", f_e
 
             ! Compare to reflected point
             if (f_e < f_r) then
@@ -156,17 +142,12 @@ function nelder_mead(f, x0, termination_tol, reflection_coef, expansion_coef, co
         ! Contraction
         else
 
-            write(*,*)
-            write(*,*) "Contracting"
-
             ! Check if we're better than the worst
             if (f_r < f_simp(i_sorted(N+1))) then
 
                 ! Calculate contracted point
                 x_c = x_cent + rho*(x_r - x_cent)
                 f_c = f(x_c)
-                write(*,*) "x_c: ", x_c
-                write(*,*) "f_c: ", f_c
 
                 ! Compare to reflected point
                 if (f_c < f_r) then
@@ -181,8 +162,6 @@ function nelder_mead(f, x0, termination_tol, reflection_coef, expansion_coef, co
                 ! Calculate contracted point
                 x_c = x_cent + rho*(x_simp(:,i_sorted(N+1)) - x_cent)
                 f_c = f(x_c)
-                write(*,*) "x_c: ", x_c
-                write(*,*) "f_c: ", f_c
 
                 ! Compare to worst point
                 if (f_c < f_simp(i_sorted(N+1))) then
@@ -196,8 +175,6 @@ function nelder_mead(f, x0, termination_tol, reflection_coef, expansion_coef, co
         end if
         
         ! Shrink
-        write(*,*)
-        write(*,*) "Shrinking"
         ! If we've made it here, then the simplex needs to shrink
         do i=2,N+1
 
@@ -211,6 +188,10 @@ function nelder_mead(f, x0, termination_tol, reflection_coef, expansion_coef, co
 
     end do
 
+    ! Parse result
+    opt_result%x_opt = x_simp(:,i_sorted(1))
+    opt_result%f_opt = f_simp(i_sorted(1))
+    opt_result%iterations = iteration
     
 end function nelder_mead
     
